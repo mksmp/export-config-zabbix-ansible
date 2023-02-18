@@ -1,0 +1,5 @@
+- name: Restart agent2.service
+  shell: |
+    systemctl restart zabbix-agent2.service
+    systemctl enable zabbix-agent2.service
+

@@ -1,0 +1,25 @@
+image: ### Ansible 6.5.1 image
+
+stages:
+- install/update_zabbix
+- configure_zabbix-agent2
+- run_script
+
+Install/update_Zabbix:
+  stage: install/update_zabbix
+  script:
+    - ansible-playbook ansible/zabbix_playbook.yml -i ansible/hosts/hosts.txt -vvvv -t install/update_zabbix
+  when: manual
+
+Configure_Zabbix-Agent2:
+  stage: configure_zabbix-agent2
+  script:
+    - ansible-playbook ansible/zabbix_playbook.yml -i ansible/hosts/hosts.txt -vvvv -t configure_zabbix-agent2
+  when: manual
+
+Export/import_zabbix_config:
+  stage: run_script
+  script:
+    - ansible-playbook ansible/zabbix_playbook.yml -i ansible/hosts/hosts.txt -vvvv -t run_sript -t restart-agent2
+  when: manual
+

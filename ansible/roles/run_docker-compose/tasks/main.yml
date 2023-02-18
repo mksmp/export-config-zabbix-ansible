@@ -1,0 +1,8 @@
+- name: rm zabbix-containers
+  ansible.builtin.shell: docker ps --filter name=zabbix* -aq | xargs docker stop | xargs docker rm
+  ignore_errors: True
+- name: rm timescale container
+  ansible.builtin.shell: docker ps --filter name=timescale* -aq | xargs docker stop | xargs docker rm
+  ignore_errors: True
+- name: run zabbix-server
+  ansible.builtin.shell: cd /home && docker-compose up -d

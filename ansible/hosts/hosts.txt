@@ -1,0 +1,28 @@
+[remote_zabbix:children]
+os_family_Debian
+os_family_RedHat
+os_family_Ubuntu
+py_script
+
+## current_host - переменная, значение = самому хосту(да, хост два раза прописать)
+
+[py_script]
+#Скрипт, на котором будет запускаться скрипт для экспорта/импорта гита# current_host=
+
+[os_family_Debian]
+#Хост на ОС Debian# current_host=
+
+[os_family_RedHat]
+#Хост на ОС ReHat# current_host=
+
+[os_family_Ubuntu]
+#Хост на ОС Ubuntu# current_host=
+
+[os_family_Debian:vars]
+os_family_type=debian
+
+[os_family_RedHat:vars]
+os_family_type=redhat
+
+[os_family_Ubuntu:vars]
+os_family_type=ubuntu

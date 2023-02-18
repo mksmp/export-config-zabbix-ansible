@@ -1,0 +1,88 @@
+- name: Test Connection
+  hosts: remote_zabbix
+  become: yes
+
+  tasks:
+    - name: Ping server
+      ping:
+  tags:
+    - test_connection
+
+- name: Install Zabbix
+  hosts: remote_zabbix
+  gather_facts: no
+
+  tasks:
+    - name: Template docker-compose.yml
+      ansible.builtin.template:
+        src: docker-compose.yml.j2
+        dest: /home/docker-compose.yml
+        owner: root
+        group: root
+        mode: u=rw,g=r,o=r
+
+    - name: Up zabbix-server with agent
+      include_role: name=run_docker-compose
+
+  tags:
+    - manual
+    - install/update_zabbix
+    - copy_docker-compose
+
+- name: Add public key to server
+  hosts: remote_zabbix
+  gather_facts: no
+
+  pre_tasks:
+    - name: Create the list
+      set_fact:
+        list_keys: "{{ keys.split(',') }}"
+
+  tasks:
+    - name: Add ssh-keys
+      include_role: name=add_test_key
+      loop: "{{ list_keys }}"
+  tags:
+    - add_ssh-key_to_host
+
+- name: Restart zabbix-agent2.service
+  hosts: remote_zabbix
+  gather_facts: no
+  tasks:
+    - name: Restart zabbix-agent2.service
+      include_role: name=restart_agent2.service
+  tags:
+    - restart-agent2
+- name: Run docker-compose on server
+  hosts: remote_zabbix
+  gather_facts: no
+
+  pre_tasks:
+    - name: Up zabbix-server with agent
+      include_role: name=install_agent2.service
+
+  tasks:
+    - name: Template agent2.conf
+      ansible.builtin.template:
+        src: zabbix_agent2.conf.j2
+        dest: /etc/zabbix/zabbix_agent2.conf
+        owner: root
+        group: root
+        mode: u=rw,g=r,o=r
+
+  tags:
+    - manual
+    - install_zabbix
+    - configure_zabbix-agent2
+
+- name: Export/Import zabbix conf
+  hosts: # host for run remote script
+  gather_facts: no
+
+  tasks:
+    - name: Show hostavers
+      include_role: name=run_copy_script
+      with_items: "{{ groups.remote_zabbix }}"
+
+  tags:
+    - run_sript

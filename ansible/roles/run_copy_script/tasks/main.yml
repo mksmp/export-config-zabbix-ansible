@@ -1,0 +1,2 @@
+- name: Run copy config from main zabbix to hosts
+  ansible.builtin.shell: python3.10 /home/zabbixAPIpy/eir_zabbix.py --host_to {{ hostvars[item]['inventory_hostname'] }} --host_from $HOST_FROM_ZABBIX

@@ -1,0 +1,122 @@
+## docker inspect keycloak| jq .[].NetworkSettings.Networks
+version: '3.9'
+
+networks:
+  default:
+    name: monitoring-zabbix
+    ipam:
+      config:
+        - subnet: 172.127.0.0/24
+
+services:
+  timescaledb:
+    image: timescale/timescaledb:2.8.1-pg14
+    container_name: timescaledb
+    restart: always
+    ports:
+      - "6543:5432"
+    environment:
+      POSTGRES_USER: "zabbix"
+      POSTGRES_PASSWORD: "zabbix_pass"
+      POSTGRES_DB: "zabbix"
+    volumes:
+      - "./postgres/data:/var/lib/postgresql/data"
+      - "./postgres/dump:/docker-entrypoint-initdb.d"
+      - "/etc/localtime:/etc/localtime:ro"
+    networks:
+      default:
+        ipv4_address: 172.127.0.7
+
+
+  zabbix-server:
+    image: zabbix/zabbix-server-pgsql:6.2.4-ubuntu
+    container_name: zabbix-server
+    hostname: zabbix-server
+    restart: always
+    depends_on:
+      - timescaledb
+    ports:
+      - "10051:10051"
+    volumes:
+      - "./zabbix-server/alertscripts:/usr/lib/zabbix/alertscripts"
+      - "./zabbix-server/externalscripts:/usr/lib/zabbix/externalscripts"
+      - "./zabbix-server/ssh_keys:/var/lib/zabbix/ssh_keys"
+      - "./zabbix-server/ssl:/var/lib/zabbix/ssl"
+      - "/etc/localtime:/etc/localtime:ro"
+    environment:
+      POSTGRES_USER: "zabbix"
+      POSTGRES_PASSWORD: "zabbix_pass"
+      POSTGRES_DB: "zabbix"
+      DB_SERVER_HOST: "timescaledb"
+      DB_SERVER_PORT: "5432"
+      ZBX_STARTPINGERS: "5"
+      ZBX_STARTPOLLERS: "15"
+      ZBX_STARTDISCOVERERS: "5"
+      ZBX_JAVAGATEWAY_ENABLE: "true"
+      ZBX_JAVAGATEWAY: "zabbix-java-gateway"
+      ZBX_JAVAGATEWAYPORT: "10052"
+      ZBX_STARTPOLLERSUNREACHABLE: "3"
+      ZBX_CACHESIZE: "256M"
+      ZBX_VMWARECACHESIZE: "128M"
+      ZBX_HISTORYINDEXCACHESIZE: "32M"
+      ZBX_HISTORYCACHESIZE: "32M"
+      ZBX_TRENDCACHESIZE: "32M"
+      ZBX_VALUECACHESIZE: "32M"
+    networks:
+      default:
+        ipv4_address: 172.127.0.6
+
+  zabbix-web:
+    image: zabbix/zabbix-web-nginx-pgsql:6.2.4-ubuntu
+    container_name: zabbix-web
+    hostname: zabbix-web
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - timescaledb
+      - zabbix-server
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+    environment:
+      # Настройки БД
+      POSTGRES_USER: "zabbix"
+      POSTGRES_PASSWORD: "zabbix_pass"
+      POSTGRES_DB: "zabbix"
+      DB_SERVER_HOST: "timescaledb"
+      DB_SERVER_PORT: "5432"
+      # Настройки Zabbix 
+      ZBX_SERVER_HOST: "{{ current_host }}"
+      ZBX_SERVER_PORT: "10051"
+      ZBX_SERVER_NAME: "{{ current_host }}"
+      ZBX_MAXEXECUTIONTIME: 300
+      ZBX_MEMORYLIMIT: 1024M
+      ZBX_POSTMAXSIZE: 128M
+      ZBX_UPLOADMAXFILESIZE: 128M
+      ZBX_MAXINPUTTIME: 300
+      # Временная зона
+      PHP_TZ: 'Europe/Moscow'
+    networks:
+      default:
+        ipv4_address: 172.127.0.5
+
+
+  zabbix-java-gateway:
+    image: zabbix/zabbix-java-gateway:6.2.4-ubuntu
+    container_name: zabbix-java-gateway
+    hostname: zabbix-java-gateway
+    restart: always
+    depends_on:
+      - zabbix-server
+    ports:
+      - "10052:10052"
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+    environment:
+      ZBX_START_POLLERS: "5"
+      ZBX_TIMEOUT: "3"
+      ZBX_DEBUGLEVEL: "error" # trace, debug, info, want, error, all, off
+      ZBX_JAVAGATEWAYPORT: "10052"
+    networks:
+      default:
+        ipv4_address: 172.127.0.8

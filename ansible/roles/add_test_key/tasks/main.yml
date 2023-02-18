@@ -1,0 +1,7 @@
+- name: Add key on hosts
+  ansible.posix.authorized_key:
+    comment: "{{ item }}"
+    state: "{{ state | default('present') }}"
+    key: "{{ lookup ('file', 'keys/id_{{item}}.pub') }}"
+    user: "{{ user | default('root') }}"
+  
